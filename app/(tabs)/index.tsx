@@ -1,75 +1,136 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import React, { useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import TaskInput from '../../TaskInput';
+import TaskList from '../../TaskList';
+
+interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+}
 
 export default function HomeScreen() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const maxTasks = 3;
+
+  const addTask = (text: string) => {
+    if (tasks.length < maxTasks) {
+      const newTask: Task = {
+        id: Date.now().toString(),
+        text: text,
+        completed: false,
+      };
+      setTasks([...tasks, newTask]);
+    }
+  };
+
+  const toggleComplete = (id: string) => {
+    setTasks(tasks.map(task => 
+      task.id === id ? { ...task, completed: !task.completed } : task
+    ));
+  };
+
+  const deleteTask = (id: string) => {
+    setTasks(tasks.filter(task => task.id !== id));
+  };
+
+  const completedCount = tasks.filter(task => task.completed).length;
+  const completionRate = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView}>
+        <ThemedView style={styles.header}>
+          <ThemedText type="title">3TASK</ThemedText>
+          <ThemedText type="subtitle">今日のタスク</ThemedText>
+          <View style={styles.progressContainer}>
+            <ThemedText type="defaultSemiBold">
+              {completedCount}/{tasks.length} 完了 ({Math.round(completionRate)}%)
+            </ThemedText>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${completionRate}%` }]} />
+            </View>
+          </View>
+        </ThemedView>
+
+        <ThemedView style={styles.content}>
+          <TaskInput 
+            onAddTask={addTask}
+            currentTaskCount={tasks.length}
+            maxTasks={maxTasks}
+          />
+          
+          <TaskList
+            tasks={tasks}
+            onToggleComplete={toggleComplete}
+            onDeleteTask={deleteTask}
+          />
+
+          {tasks.length === 0 && (
+            <ThemedView style={styles.emptyState}>
+              <ThemedText type="default" style={styles.emptyText}>
+                今日のタスクを追加してください
+              </ThemedText>
+              <ThemedText type="default" style={styles.emptySubText}>
+                1日最大3つのタスクに集中しましょう
+              </ThemedText>
+            </ThemedView>
+          )}
+        </ThemedView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  progressContainer: {
+    marginTop: 15,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 4,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  emptyState: {
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  emptyText: {
+    fontSize: 18,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  emptySubText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
 });

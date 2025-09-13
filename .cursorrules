@@ -1,0 +1,343 @@
+# 3TASK - React Native Expo アプリケーション Cursor Rules
+
+## プロジェクト概要
+3TASKは、1日3つのタスクに集中するシンプルなタスク管理アプリケーションです。React Native + Expoを使用し、iOS、Android、Webで動作します。
+
+## 技術スタック
+- **フレームワーク**: React Native + Expo
+- **言語**: TypeScript
+- **状態管理**: React Context API
+- **データ保存**: AsyncStorage（ローカルストレージ）
+- **UI**: カスタムコンポーネント + ThemedText/ThemedView
+
+## 開発原則
+
+### 1. シンプル性重視
+- 複雑な機能は避け、必要最小限の機能に絞る
+- 1日3つのタスクという制約を常に意識する
+- ユーザーが迷わない直感的なUI/UXを心がける
+
+### 2. コード品質
+- TypeScriptの型安全性を活用する
+- ESLintルールに従う
+- 再利用可能なコンポーネントを設計する
+- 適切なコメントとドキュメントを書く
+
+### 3. パフォーマンス
+- 不要な再レンダリングを避ける
+- メモリ効率を考慮する
+- 起動時間3秒以内を目標とする
+
+## コーディング規約
+
+### TypeScript
+```typescript
+// インターフェースは明確に定義
+interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt?: Date;
+}
+
+// 関数の型注釈を必ず書く
+const addTask = (text: string): void => {
+  // implementation
+};
+
+// コンポーネントのProps型を定義
+interface TaskItemProps {
+  task: Task;
+  onToggleComplete: (id: string) => void;
+  onDeleteTask: (id: string) => void;
+}
+```
+
+### React Native
+```typescript
+// コンポーネントは関数型で定義
+export default function TaskItem({ task, onToggleComplete, onDeleteTask }: TaskItemProps) {
+  // implementation
+}
+
+// スタイルはStyleSheet.createを使用
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+});
+
+// 状態管理はuseStateまたはuseContextを使用
+const [tasks, setTasks] = useState<Task[]>([]);
+```
+
+### ファイル構造
+```
+app/
+├── (tabs)/
+│   ├── index.tsx          # ホーム画面（タスク管理）
+│   ├── explore.tsx        # 探索画面（統計・設定）
+│   └── _layout.tsx        # タブレイアウト
+├── _layout.tsx            # ルートレイアウト
+└── +not-found.tsx         # 404画面
+
+components/                 # 再利用可能なコンポーネント
+├── ThemedText.tsx
+├── ThemedView.tsx
+└── ui/
+
+docs/                      # プロジェクトドキュメント
+├── requirements/
+└── README.md
+
+TaskInput.js               # タスク入力コンポーネント
+TaskItem.js                # タスクアイテムコンポーネント
+TaskList.js                # タスクリストコンポーネント
+```
+
+## 機能実装ガイドライン
+
+### タスク管理機能
+- 1日最大3つのタスクに制限
+- タスクの追加、編集、削除、完了機能
+- 進捗表示（完了率、プログレスバー）
+- データの永続化（AsyncStorage）
+
+### UI/UX ガイドライン
+- シンプルで直感的なインターフェース
+- 適切なフィードバック（完了時の視覚的変化）
+- 空状態の適切な表示
+- エラーハンドリングとユーザー通知
+
+### データ管理
+```typescript
+// AsyncStorageでのデータ保存例
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const saveTasks = async (tasks: Task[]): Promise<void> => {
+  try {
+    await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
+  } catch (error) {
+    console.error('Failed to save tasks:', error);
+  }
+};
+
+const loadTasks = async (): Promise<Task[]> => {
+  try {
+    const tasksJson = await AsyncStorage.getItem('tasks');
+    return tasksJson ? JSON.parse(tasksJson) : [];
+  } catch (error) {
+    console.error('Failed to load tasks:', error);
+    return [];
+  }
+};
+```
+
+## 禁止事項
+
+### 避けるべき実装
+- 3つを超えるタスクの追加
+- 複雑なネストしたコンポーネント構造
+- 外部API依存（オフライン動作を重視）
+- 過度なアニメーション（パフォーマンス重視）
+- ハードコードされた文字列（多言語対応のため）
+
+### 避けるべきパターン
+```typescript
+// ❌ 避けるべき: 型安全性のない実装
+const tasks = []; // any型の配列
+
+// ✅ 推奨: 型安全な実装
+const tasks: Task[] = [];
+
+// ❌ 避けるべき: インラインスタイル
+<View style={{ flex: 1, backgroundColor: '#fff' }}>
+
+// ✅ 推奨: StyleSheet使用
+<View style={styles.container}>
+```
+
+## テスト戦略
+
+### テスト対象
+- タスクの追加、編集、削除機能
+- 3つ制限の動作確認
+- データ永続化の動作確認
+- UI コンポーネントの基本動作
+
+### テスト例
+```typescript
+// テストファイル例
+import { render, fireEvent } from '@testing-library/react-native';
+import TaskInput from '../TaskInput';
+
+describe('TaskInput', () => {
+  it('should add task when input is provided', () => {
+    const mockAddTask = jest.fn();
+    const { getByPlaceholderText, getByText } = render(
+      <TaskInput onAddTask={mockAddTask} currentTaskCount={0} maxTasks={3} />
+    );
+    
+    fireEvent.changeText(getByPlaceholderText('新しいタスクを入力...'), 'Test task');
+    fireEvent.press(getByText('追加'));
+    
+    expect(mockAddTask).toHaveBeenCalledWith('Test task');
+  });
+});
+```
+
+## パフォーマンス最適化
+
+### 推奨パターン
+- React.memo()で不要な再レンダリングを防ぐ
+- useCallback()で関数の再作成を防ぐ
+- FlatListで大量データを効率的に表示
+- 画像の最適化（expo-image使用）
+
+### 避けるべきパターン
+- 毎回新しいオブジェクト/配列を作成
+- 重い計算をrender内で実行
+- 不要なuseEffectの依存関係
+
+## エラーハンドリング
+
+### エラー処理パターン
+```typescript
+// AsyncStorage エラーハンドリング
+try {
+  await AsyncStorage.setItem('key', 'value');
+} catch (error) {
+  console.error('Storage error:', error);
+  // ユーザーに適切なエラーメッセージを表示
+}
+
+// コンポーネントエラーハンドリング
+const [error, setError] = useState<string | null>(null);
+
+if (error) {
+  return <ErrorView message={error} onRetry={() => setError(null)} />;
+}
+```
+
+## デバッグとログ
+
+### ログレベル
+- `console.log()`: 開発時のデバッグ情報
+- `console.error()`: エラー情報
+- `console.warn()`: 警告情報
+
+### デバッグツール
+- React Native Debugger
+- Flipper
+- Expo Dev Tools
+
+## コミットメッセージ規約
+
+```
+feat: 新機能追加
+fix: バグ修正
+docs: ドキュメント更新
+style: コードフォーマット修正
+refactor: リファクタリング
+test: テスト追加・修正
+chore: ビルド設定・依存関係更新
+```
+
+例:
+- `feat: タスク完了機能を追加`
+- `fix: 3つ制限のバリデーション修正`
+- `docs: READMEにセットアップ手順を追加`
+
+## 開発ワークフロー
+
+### ブランチ戦略
+- `main`: 本番環境
+- `develop`: 開発環境
+- `feature/機能名`: 機能開発ブランチ
+- `hotfix/修正内容`: 緊急修正ブランチ
+
+### プルリクエスト
+- 小さな単位で作成
+- レビュー必須
+- テスト通過必須
+- ドキュメント更新必須
+
+## リリース管理
+
+### バージョニング
+- Semantic Versioning (MAJOR.MINOR.PATCH)
+- 例: 1.0.0, 1.1.0, 1.1.1
+
+### リリースノート
+- 新機能
+- バグ修正
+- 破壊的変更
+- 既知の問題
+
+## セキュリティ考慮事項
+
+### データ保護
+- ローカルデータの暗号化検討
+- 個人情報の外部送信禁止
+- 適切なアクセス制御
+
+### プライバシー
+- データ収集の最小化
+- ユーザー同意の取得
+- データ削除機能の提供
+
+## アクセシビリティ
+
+### 対応項目
+- スクリーンリーダー対応
+- キーボードナビゲーション
+- 適切なコントラスト比
+- フォントサイズの調整
+
+### 実装例
+```typescript
+<TextInput
+  accessibilityLabel="新しいタスクを入力"
+  accessibilityHint="タスクの内容を入力してください"
+  accessibilityRole="text"
+/>
+```
+
+## 国際化対応
+
+### 準備事項
+- ハードコードされた文字列の排除
+- 多言語リソースファイルの準備
+- 日付・数値フォーマットの考慮
+
+### 実装例
+```typescript
+// 将来的な国際化対応の準備
+const strings = {
+  addTask: 'タスクを追加',
+  taskCompleted: 'タスクが完了しました',
+  maxTasksReached: '今日のタスクは3つまでです',
+};
+```
+
+## 監視とメトリクス
+
+### 追跡指標
+- アプリクラッシュ率
+- 起動時間
+- メモリ使用量
+- ユーザーエンゲージメント
+
+### 実装例
+```typescript
+// パフォーマンス監視
+const startTime = Date.now();
+// ... 処理 ...
+const endTime = Date.now();
+console.log(`処理時間: ${endTime - startTime}ms`);
+```
+
+---
+
+このCursor Rulesは、3TASKプロジェクトの品質と一貫性を保つためのガイドラインです。開発中は常にこれらのルールを参照し、必要に応じて更新してください。
